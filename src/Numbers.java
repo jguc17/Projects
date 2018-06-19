@@ -13,8 +13,22 @@ public class Numbers {
         int success3 = test.findFibNumberRecursive(20, 1, 0 );
         int[] success4 = test.findPrimeFactors(101);
         test.findNextPrimeNumber();
+
+        // alarm clock business - uncomment below to run
+        AlarmClock alarm = new AlarmClock();
+        // ask user to set time
+        alarm.startClock();
     }
 
+
+    // borrowed from Oracle tutorial for cross-thread printing: https://docs.oracle.com/javase/tutorial/essential/concurrency/simple.html
+    static void threadMessage(String message) {
+        String threadName =
+            Thread.currentThread().getName();
+        System.out.format("%s: %s%n",
+            threadName,
+            message);
+    }
 
     public int findPiNthDigit(int N) {
         BigDecimal pi = new BigDecimal(Math.PI);
