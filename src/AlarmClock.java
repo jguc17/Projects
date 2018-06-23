@@ -1,25 +1,22 @@
 import org.omg.PortableInterceptor.SYSTEM_EXCEPTION;
 
+import java.util.Scanner;
+import java.util.concurrent.atomic.AtomicInteger;
+
 public class AlarmClock  {
 
-    // time params
+    // time parameters
     private int seconds = 0;
     private int minutes = 0;
     private int hours = 0;
+    private int totalTimeRemaining = 0;
 
-    // mode: countdown or set time
-    private boolean countdownMode = true;
     private boolean isActive = false;
 
     public AlarmClock() {
     }
 
-//    public void run() {
-//        System.out.println("Alarm clock sequence started!");
-//        this.startClock();
-//    }
-
-    // print status
+    // print status of the alarm clock
     private void status() {
         if(this.isActive) {
             System.out.println("Alarm is active.");
@@ -28,13 +25,8 @@ public class AlarmClock  {
             System.out.println("Alarm is inactive.");
         }
     }
-    public void getTimeOnClock(int hours, int minutes, int seconds) {
-        if(this.countdownMode) {
-            System.out.println("Alarm countdown currently at: "+this.hours+" hours, "+this.minutes+" minutes, and "+this.seconds+" seconds.");
-        }
-        else {
-            System.out.println("Alarm time currently set to: "+this.hours+":"+this.minutes+":"+this.seconds);
-        }
+    public void getTimeOnClock() {
+        System.out.println("Alarm countdown currently at: "+this.hours+" hours, "+this.minutes+" minutes, and "+this.seconds+" seconds.");
         this.status();
     }
 
@@ -44,36 +36,76 @@ public class AlarmClock  {
         this.minutes = minutes;
         this.hours = hours;
 
-        if(this.countdownMode) System.out.println("Alarm clock has been set to "+this.hours+" hours, "+this.minutes+" minutes, and "+this.seconds+" seconds.");
-        else System.out.println("Alarm time has been set to: "+this.hours+":"+this.minutes+":"+this.seconds);
+        System.out.println("Alarm clock has been set to "+this.hours+" hours, "+this.minutes+" minutes, and "+this.seconds+" seconds.");
     }
 
-    public int convertToSeconds(){
-        return this.seconds + this.minutes*60 + this.hours*3600;
+    // getter and setter for time parameters after subthread conclusion
+    private int convertToSeconds(){
+        this.totalTimeRemaining = (this.seconds + this.minutes*60 + this.hours*3600);
+        return this.totalTimeRemaining;
+    }
+    private void updateTime(int remainder){
+        this.totalTimeRemaining = remainder;
+        this.hours = this.totalTimeRemaining / 3600;
+        this.minutes = this.totalTimeRemaining / 60 - this.hours*60;
+        this.seconds = this.totalTimeRemaining - this.hours*3600 - this.minutes*60;
     }
 
-    // toggle alarm clock mode
-    public boolean isCountdownMode() {
-        whichMode();
-        return countdownMode;
-    }
-    public void setCountdownMode(boolean countdownMode) {
-        this.countdownMode = !this.countdownMode;
-        whichMode();
-    }
-    private void whichMode() {
-        if(this.countdownMode) System.out.println("Alarm clock is in count down mode.");
-        else System.out.println("Alarm clock is in clock time mode.");
-    }
-
-    // TODO: in main thread, perform a join on the timer runnable, then periodically check in on Timer and update clock countdown
-    // TODO: move the sleep command from runnable to main thread
-    public void startClock() {
+    // run time countdown in separate thread
+    public void startClock() throws InterruptedException {
         this.isActive = !this.isActive;
-        if(this.countdownMode) {
-            Thread t = new Thread(new Timer(this.convertToSeconds()));
+
+        if(this.isActive) {
+            int currentTime = this.convertToSeconds();
+
+            final AtomicInteger sharedTime = new AtomicInteger(currentTime);    // use atomicinteger to allow for shared variable access
+            Thread t = new Thread(new Runnable() {
+                public void run() {
+                    int currentTime = (int) (System.currentTimeMillis()/1000);  // in seconds
+                    int timeElapsed = 0;
+                    int totalSeconds = sharedTime.get();
+                    try {
+                        while(timeElapsed < totalSeconds) {
+                            Thread.sleep(1000);
+                            ++timeElapsed;
+                            sharedTime.getAndDecrement();
+                        }
+                    } catch(InterruptedException ie) {
+                        System.out.println("time interrupted");
+                    }
+                }
+            });
+
             // start background process of countdown
+            // unorthodox, but you can tell when alarm clock finishes countdown with an uncaught exception
             t.start();
+            while (t.isAlive()) {
+                // allow user to check in on background process
+                boolean endClock = false;
+                Scanner scan = new Scanner(System.in);
+                System.out.println("Check in on time remaining: 1\nPause Timer: 0\nEnd AlarmClock Module: -1");
+                String input = scan.nextLine();
+                switch(input) {
+                    case "1":
+                        updateTime(sharedTime.get());
+                        break;
+                    case "0":
+                        this.isActive = !this.isActive;
+                        t.interrupt();
+                        System.out.println("Time Remaining: "+sharedTime.get());
+                        updateTime(sharedTime.get());
+
+                        break;
+                    case "-1":
+                        endClock = true;
+                        break;
+                }
+                this.getTimeOnClock();
+                this.status();
+                if(endClock) {
+                    break;
+                }
+            }
         }
     }
 }

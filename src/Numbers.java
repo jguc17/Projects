@@ -16,8 +16,12 @@ public class Numbers {
 
         // alarm clock business - uncomment below to run
         AlarmClock alarm = new AlarmClock();
-        // ask user to set time
-        alarm.startClock();
+        alarm.setTimeOnClock(0,0,15);
+        try {
+            alarm.startClock();
+        } catch(InterruptedException e) {
+            System.out.println("MAIN THREAD: caught interrupted exception ... terminating alarm clock session");
+        }
     }
 
 
