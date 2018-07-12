@@ -2,6 +2,7 @@ import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Scanner;
+import java.util.BitSet;
 
 
 public class Numbers {
@@ -15,13 +16,16 @@ public class Numbers {
         test.findNextPrimeNumber();
 
         // alarm clock business - uncomment below to run
-        AlarmClock alarm = new AlarmClock();
-        alarm.setTimeOnClock(0,0,15);
-        try {
-            alarm.startClock();
-        } catch(InterruptedException e) {
-            System.out.println("MAIN THREAD: caught interrupted exception ... terminating alarm clock session");
-        }
+//        AlarmClock alarm = new AlarmClock();
+//        alarm.setTimeOnClock(0,0,15);
+//        try {
+//            alarm.startClock();
+//        } catch(InterruptedException e) {
+//            System.out.println("MAIN THREAD: caught interrupted exception ... terminating alarm clock session");
+//        }
+
+        //Sieve of Eratosthenes
+        test.sieveOfEras(100);
     }
 
 
@@ -162,7 +166,7 @@ public class Numbers {
             primeCounter = 0;   // reset primeCounter
         }
 
-        // last check: if N itself is prime
+        // last check: if N itself is prime, then no other #'s besides 1 has been added to the list
         if(primeList.size() == 1) {
             primeList.add(N);
         }
@@ -227,4 +231,46 @@ public class Numbers {
         }
     }
 
+    public void sieveOfEras(int max) {
+        int currentPrime = 2;
+        boolean reachedEnd = false;
+        BitSet results = new BitSet(max);
+        BitSet checker = new BitSet(max);
+
+        // by default, 1 and 2 are primes
+        results.set(0,2);
+        checker.set(0,2);
+
+        while(!reachedEnd) {
+            checker.or(getPrimeMultiples(currentPrime,max));
+            for (int j = 2; j<max; ++j) {
+                if (!checker.get(j)) {
+                    results.set(j);
+                    currentPrime = j+1;
+                    break;
+                }
+            }
+            // if currentPrime remains the same after the inner loop, we know the inner loop has gone to completion and that we are done
+            if (checker.get(currentPrime-1)) {
+                reachedEnd = true;
+            }
+        }
+        
+        for(int h=0; h<max; ++h) {
+            if (results.get(h)){
+                System.out.print(h+1+", ");
+            }
+        }
+    }
+
+    private BitSet getPrimeMultiples(int currentPrime, int max) {
+        BitSet primeMultiples = new BitSet(max);
+        int multiple = currentPrime;
+        for(int i=2; multiple<=max; ++i) {
+            primeMultiples.set(multiple-1);
+            multiple = currentPrime*i;
+        }
+        if (!primeMultiples.isEmpty()) return primeMultiples;
+        else return null;
+    }
 }
